@@ -55,6 +55,7 @@ instance IsSet LabelSet where
   setSingleton (Label k) = LS (setSingleton k)
   setInsert (Label k) (LS s) = LS (setInsert k s)
   setDelete (Label k) (LS s) = LS (setDelete k s)
+  setFilter p (LS s) = LS (setFilter (p . uniqueToLbl) s)
 
   setUnion (LS x) (LS y) = LS (setUnion x y)
   setDifference (LS x) (LS y) = LS (setDifference x y)
@@ -86,6 +87,7 @@ instance IsMap LabelMap where
   mapInsert (Label k) v (LM m) = LM (mapInsert k v m)
   mapInsertWith f (Label k) v (LM m) = LM (mapInsertWith f k v m)
   mapDelete (Label k) (LM m) = LM (mapDelete k m)
+  mapAdjust f (Label k) (LM m) = LM (mapAdjust f k m)
 
   mapUnion (LM x) (LM y) = LM (mapUnion x y)
   mapUnionWithKey f (LM x) (LM y) = LM (mapUnionWithKey (f . uniqueToLbl) x y)
@@ -98,6 +100,9 @@ instance IsMap LabelMap where
   mapFold k z (LM m) = mapFold k z m
   mapFoldWithKey k z (LM m) = mapFoldWithKey (k . uniqueToLbl) z m
   mapFilter f (LM m) = LM (mapFilter f m)
+  mapFilterWithKey f (LM m) = LM (mapFilterWithKey (f . uniqueToLbl) m)
+  mapAccum f a (LM m) = fmap LM (mapAccum f a m)
+  mapAccumWithKey f a (LM m) = fmap LM (mapAccumWithKey (\x -> f x . uniqueToLbl) a m)
 
   mapElems (LM m) = mapElems m
   mapKeys (LM m) = map uniqueToLbl (mapKeys m)

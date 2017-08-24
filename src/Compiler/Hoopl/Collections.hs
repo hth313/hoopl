@@ -24,6 +24,7 @@ class IsSet set where
   setSingleton :: ElemOf set -> set
   setInsert :: ElemOf set -> set -> set
   setDelete :: ElemOf set -> set -> set
+  setFilter :: (ElemOf set -> Bool) -> set -> set
 
   setUnion :: set -> set -> set
   setDifference :: set -> set -> set
@@ -61,6 +62,7 @@ class IsMap map where
   mapInsert :: KeyOf map -> a -> map a -> map a
   mapInsertWith :: (a -> a -> a) -> KeyOf map -> a -> map a -> map a
   mapDelete :: KeyOf map -> map a -> map a
+  mapAdjust :: (a -> a) -> KeyOf map -> map a -> map a
 
   mapUnion :: map a -> map a -> map a
   mapUnionWithKey :: (KeyOf map -> a -> a -> a) -> map a -> map a -> map a
@@ -73,6 +75,9 @@ class IsMap map where
   mapFold :: (a -> b -> b) -> b -> map a -> b
   mapFoldWithKey :: (KeyOf map -> a -> b -> b) -> b -> map a -> b
   mapFilter :: (a -> Bool) -> map a -> map a
+  mapFilterWithKey :: (KeyOf map -> a -> Bool) -> map a -> map a
+  mapAccum :: (a -> b -> (a, c)) -> a -> map b -> (a, map c)
+  mapAccumWithKey :: (a -> KeyOf map -> b -> (a, c)) -> a -> map b -> (a, map c)
 
   mapElems :: map a -> [a]
   mapKeys :: map a -> [KeyOf map]

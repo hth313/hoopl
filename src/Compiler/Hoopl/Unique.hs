@@ -60,6 +60,7 @@ instance IsSet UniqueSet where
   setSingleton k = US (S.singleton k)
   setInsert k (US s) = US (S.insert k s)
   setDelete k (US s) = US (S.delete k s)
+  setFilter p (US s) = US (S.filter p s)
 
   setUnion (US x) (US y) = US (S.union x y)
   setDifference (US x) (US y) = US (S.difference x y)
@@ -91,6 +92,7 @@ instance IsMap UniqueMap where
   mapInsert k v (UM m) = UM (M.insert k v m)
   mapInsertWith f k v (UM m) = UM (M.insertWith f k v m)
   mapDelete k (UM m) = UM (M.delete k m)
+  mapAdjust f k (UM m) = UM (M.adjust f k m)
 
   mapUnion (UM x) (UM y) = UM (M.union x y)
   mapUnionWithKey f (UM x) (UM y) = UM (M.unionWithKey (f . intToUnique) x y)
@@ -103,6 +105,9 @@ instance IsMap UniqueMap where
   mapFold k z (UM m) = M.foldr k z m
   mapFoldWithKey k z (UM m) = M.foldrWithKey (k . intToUnique) z m
   mapFilter f (UM m) = UM (M.filter f m)
+  mapFilterWithKey f (UM m) = UM (M.filterWithKey (f . intToUnique) m)
+  mapAccum f a (UM m) = fmap UM (M.mapAccum f a m)
+  mapAccumWithKey f a (UM m) = fmap UM (M.mapAccumWithKey (\x -> f x . intToUnique) a m)
 
   mapElems (UM m) = M.elems m
   mapKeys (UM m) = M.keys m
