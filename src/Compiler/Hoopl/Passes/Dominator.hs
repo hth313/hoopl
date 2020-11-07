@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP, GADTs #-}
 {-# OPTIONS_GHC -Wall -fno-warn-name-shadowing #-}
 #if __GLASGOW_HASKELL__ >= 723
-{-# LANGUAGE Safe #-}
+--{-# LANGUAGE Safe #-}
 #endif
 
 module Compiler.Hoopl.Passes.Dominator
@@ -13,6 +13,7 @@ module Compiler.Hoopl.Passes.Dominator
 where
 
 import Data.Maybe
+import qualified Data.EnumMap as EM
 import qualified Data.Set as Set
 
 import Compiler.Hoopl
@@ -84,12 +85,12 @@ tree facts = Dominates Entry $ merge $ map reverse $ map mkList facts
   where merge lists = mapTree $ children $ filter (not . null) lists
         children = foldl addList noFacts
         addList :: FactBase [[Label]] -> [Label] -> FactBase [[Label]]
-        addList map (x:xs) = mapInsert x (xs:existing) map
+        addList map (x:xs) = EM.insert x (xs:existing) map
             where existing = fromMaybe [] $ lookupFact x map
         addList _ [] = error "this can't happen"
         mapTree :: FactBase [[Label]] -> [DominatorTree]
         mapTree map = [Dominates (Labelled x) (merge lists) |
-                                                    (x, lists) <- mapToList map]
+                                                    (x, lists) <- EM.toList map]
         mkList (l, doms) = l : domPath doms
 
 
@@ -123,7 +124,7 @@ instance Show DominatorNode where
 -- | Takes FactBase from dominator analysis and returns a map from each 
 -- label to its immediate dominator, if any
 immediateDominators :: FactBase Doms -> LabelMap Label
-immediateDominators = mapFoldWithKey add mapEmpty
-    where add l (PElem (DPath (idom:_))) = mapInsert l idom 
+immediateDominators = EM.foldWithKey add EM.empty
+    where add l (PElem (DPath (idom:_))) = EM.insert l idom 
           add _ _ = id
 

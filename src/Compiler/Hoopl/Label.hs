@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP, TypeFamilies #-}
 {-# LANGUAGE DeriveFunctor, DeriveFoldable, DeriveTraversable #-}
 #if __GLASGOW_HASKELL__ >= 701
-{-# LANGUAGE Safe #-}
+-- {-# LANGUAGE Safe #-}
 #endif
 
 module Compiler.Hoopl.Label
@@ -16,8 +16,10 @@ module Compiler.Hoopl.Label
 
 where
 
-import Compiler.Hoopl.Collections
 import Compiler.Hoopl.Unique
+import Data.EnumMap (EnumMap)
+import qualified Data.EnumMap as EM
+import Data.EnumSet (EnumSet)
 #if !MIN_VERSION_base(4,8,0)
 import Data.Traversable (Traversable)
 import Data.Foldable (Foldable)
@@ -33,6 +35,10 @@ newtype Label = Label { lblToUnique :: Unique }
 uniqueToLbl :: Unique -> Label
 uniqueToLbl = Label
 
+instance Enum Label where
+  fromEnum = lblToUnique
+  toEnum = Label
+
 instance Show Label where
   show (Label n) = "L" ++ show n
 
@@ -42,73 +48,12 @@ freshLabel = freshUnique >>= return . uniqueToLbl
 -----------------------------------------------------------------------------
 -- LabelSet
 
-newtype LabelSet = LS UniqueSet deriving (Eq, Ord, Show)
-
-instance IsSet LabelSet where
-  type ElemOf LabelSet = Label
-
-  setNull (LS s) = setNull s
-  setSize (LS s) = setSize s
-  setMember (Label k) (LS s) = setMember k s
-
-  setEmpty = LS setEmpty
-  setSingleton (Label k) = LS (setSingleton k)
-  setInsert (Label k) (LS s) = LS (setInsert k s)
-  setDelete (Label k) (LS s) = LS (setDelete k s)
-  setFilter p (LS s) = LS (setFilter (p . uniqueToLbl) s)
-
-  setUnion (LS x) (LS y) = LS (setUnion x y)
-  setDifference (LS x) (LS y) = LS (setDifference x y)
-  setIntersection (LS x) (LS y) = LS (setIntersection x y)
-  setIsSubsetOf (LS x) (LS y) = setIsSubsetOf x y
-
-  setFold k z (LS s) = setFold (k . uniqueToLbl) z s
-
-  setElems (LS s) = map uniqueToLbl (setElems s)
-  setFromList ks = LS (setFromList (map lblToUnique ks))
+type LabelSet = EnumSet Label
 
 -----------------------------------------------------------------------------
 -- LabelMap
 
-newtype LabelMap v = LM (UniqueMap v)
-  deriving (Eq, Ord, Show, Functor, Foldable, Traversable)
-
-instance IsMap LabelMap where
-  type KeyOf LabelMap = Label
-
-  mapNull (LM m) = mapNull m
-  mapSize (LM m) = mapSize m
-  mapMember (Label k) (LM m) = mapMember k m
-  mapLookup (Label k) (LM m) = mapLookup k m
-  mapFindWithDefault def (Label k) (LM m) = mapFindWithDefault def k m
-
-  mapEmpty = LM mapEmpty
-  mapSingleton (Label k) v = LM (mapSingleton k v)
-  mapInsert (Label k) v (LM m) = LM (mapInsert k v m)
-  mapInsertWith f (Label k) v (LM m) = LM (mapInsertWith f k v m)
-  mapDelete (Label k) (LM m) = LM (mapDelete k m)
-  mapAdjust f (Label k) (LM m) = LM (mapAdjust f k m)
-
-  mapUnion (LM x) (LM y) = LM (mapUnion x y)
-  mapUnionWithKey f (LM x) (LM y) = LM (mapUnionWithKey (f . uniqueToLbl) x y)
-  mapDifference (LM x) (LM y) = LM (mapDifference x y)
-  mapIntersection (LM x) (LM y) = LM (mapIntersection x y)
-  mapIsSubmapOf (LM x) (LM y) = mapIsSubmapOf x y
-
-  mapMap f (LM m) = LM (mapMap f m)
-  mapMapWithKey f (LM m) = LM (mapMapWithKey (f . uniqueToLbl) m)
-  mapFold k z (LM m) = mapFold k z m
-  mapFoldWithKey k z (LM m) = mapFoldWithKey (k . uniqueToLbl) z m
-  mapFilter f (LM m) = LM (mapFilter f m)
-  mapFilterWithKey f (LM m) = LM (mapFilterWithKey (f . uniqueToLbl) m)
-  mapAccum f a (LM m) = fmap LM (mapAccum f a m)
-  mapAccumWithKey f a (LM m) = fmap LM (mapAccumWithKey (\x -> f x . uniqueToLbl) a m)
-
-  mapElems (LM m) = mapElems m
-  mapKeys (LM m) = map uniqueToLbl (mapKeys m)
-  mapToList (LM m) = [(uniqueToLbl k, v) | (k, v) <- mapToList m]
-  mapFromList assocs = LM (mapFromList [(lblToUnique k, v) | (k, v) <- assocs])
-  mapFromListWith f assocs = LM (mapFromListWith f [(lblToUnique k, v) | (k, v) <- assocs])
+type LabelMap v = EnumMap Label v
 
 -----------------------------------------------------------------------------
 -- FactBase
@@ -116,7 +61,7 @@ instance IsMap LabelMap where
 type FactBase f = LabelMap f
 
 noFacts :: FactBase f
-noFacts = mapEmpty
+noFacts = EM.empty
 
 lookupFact :: Label -> FactBase f -> Maybe f
-lookupFact = mapLookup
+lookupFact = EM.lookup

@@ -1,6 +1,6 @@
 {-# LANGUAGE CPP, GADTs, RankNTypes, ScopedTypeVariables, TypeFamilies  #-}
 #if __GLASGOW_HASKELL__ >= 709
-{-# LANGUAGE Safe #-}
+--{-# LANGUAGE Safe #-}
 #elif __GLASGOW_HASKELL__ >= 701
 {-# LANGUAGE Trustworthy #-}
 #endif
@@ -24,12 +24,12 @@ where
 import qualified Data.Map as M
 import Data.Maybe
 
-import Compiler.Hoopl.Collections
 import Compiler.Hoopl.Checkpoint
 import Compiler.Hoopl.Dataflow
 import Compiler.Hoopl.Block
 import Compiler.Hoopl.Graph
 import Compiler.Hoopl.Label
+import qualified Data.EnumMap as EM
 
 -----------------------------------------------------------------------------
 
@@ -126,14 +126,14 @@ distributeXfer lattice xfer n f =
 -- for a last node takes the incoming fact unchanged and simply distributes
 -- that fact over the outgoing edges.
 distributeFact :: NonLocal n => n O C -> f -> FactBase f
-distributeFact n f = mapFromList [ (l, f) | l <- successors n ]
+distributeFact n f = EM.fromList [ (l, f) | l <- successors n ]
    -- because the same fact goes out on every edge,
    -- there's no need for 'mkFactBase' here.
 
 -- | This utility function handles a common case in which a backward transfer
 -- function takes the incoming fact unchanged and tags it with the node's label.
 distributeFactBwd :: NonLocal n => n C O -> f -> FactBase f
-distributeFactBwd n f = mapSingleton (entryLabel n) f
+distributeFactBwd n f = EM.singleton (entryLabel n) f
 
 -- | List of (unlabelled) facts from the successors of a last node
 successorFacts :: NonLocal n => n O C -> FactBase f -> [f]

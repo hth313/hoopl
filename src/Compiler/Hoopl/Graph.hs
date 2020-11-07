@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP, GADTs, TypeFamilies, ScopedTypeVariables,
     RankNTypes, FlexibleInstances, TypeSynonymInstances #-}
 #if __GLASGOW_HASKELL__ >= 701
-{-# LANGUAGE Safe #-}
+--{-# LANGUAGE Safe #-}
 #endif
 #if __GLASGOW_HASKELL__ < 701
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
@@ -49,6 +49,9 @@ import Compiler.Hoopl.Label
 import Control.Applicative as AP (Applicative(..))
 import Control.Monad (ap,liftM,liftM2)
 
+import qualified Data.EnumMap as EM
+import qualified Data.EnumSet as ES
+
 -- -----------------------------------------------------------------------------
 -- Body
 
@@ -59,21 +62,21 @@ type Body n = LabelMap (Block n C C)
 type Body' block (n :: * -> * -> *) = LabelMap (block n C C)
 
 emptyBody :: Body' block n
-emptyBody = mapEmpty
+emptyBody = EM.empty
 
 bodyUnion :: forall a . LabelMap a -> LabelMap a -> LabelMap a
-bodyUnion = mapUnionWithKey nodups
+bodyUnion = EM.unionWithKey nodups
   where nodups l _ _ = error $ "duplicate blocks with label " ++ show l
 
 bodyList :: Body' block n -> [(Label,block n C C)]
-bodyList body = mapToList body
+bodyList body = EM.toList body
 
 addBlock :: NonLocal thing
          => thing C C -> LabelMap (thing C C)
          -> LabelMap (thing C C)
 addBlock b body
-  | mapMember lbl body = error $ "duplicate label " ++ show lbl ++ " in graph"
-  | otherwise          = mapInsert lbl b body
+  | EM.member lbl body = error $ "duplicate label " ++ show lbl ++ " in graph"
+  | otherwise          = EM.insert lbl b body
   where lbl = entryLabel b
 
 
@@ -220,7 +223,7 @@ mapGraphBlocks f = map
   where map :: Graph' block n e x -> Graph' block' n' e x
         map GNil = GNil
         map (GUnit b) = GUnit (f b)
-        map (GMany e b x) = GMany (fmap f e) (mapMap f b) (fmap f x)
+        map (GMany e b x) = GMany (fmap f e) (EM.map f b) (fmap f x)
 
 
 -- -----------------------------------------------------------------------------
@@ -241,7 +244,7 @@ foldGraphNodes f = graph
           graph (GUnit b)         = block b
           graph (GMany e b x)     = lift block e . body b . lift block x
           body :: Body n -> a -> a
-          body bdy                = \a -> mapFold block a bdy
+          body bdy                = \a -> EM.foldr block a bdy
           lift _ NothingO         = id
           lift f (JustO thing)    = f thing
 
@@ -261,7 +264,7 @@ instance LabelsPtr Label where
   targetLabels l = [l]
 
 instance LabelsPtr LabelSet where
-  targetLabels = setElems
+  targetLabels = ES.elems
 
 instance LabelsPtr l => LabelsPtr [l] where
   targetLabels = concatMap targetLabels
@@ -312,7 +315,7 @@ graphDfs :: (LabelMap (block n C C) -> block n O C -> LabelSet -> [block n C C])
          -> (Graph' block n O x -> [block n C C])
 graphDfs _     (GNil)    = []
 graphDfs _     (GUnit{}) = []
-graphDfs order (GMany (JustO entry) body _) = order body entry setEmpty
+graphDfs order (GMany (JustO entry) body _) = order body entry ES.empty
 
 postorder_dfs = graphDfs postorder_dfs_from_except
 preorder_dfs  = graphDfs preorder_dfs_from_except
@@ -324,11 +327,11 @@ postorder_dfs_from_except blocks b visited =
  where
    vnode :: block C C -> ([block C C] -> LabelSet -> a) -> [block C C] -> LabelSet -> a
    vnode block cont acc visited =
-        if setMember id visited then
+        if ES.member id visited then
             cont acc visited
         else
             let cont' acc visited = cont (block:acc) visited in
-            vchildren (get_children block) cont' acc (setInsert id visited)
+            vchildren (get_children block) cont' acc (ES.insert id visited)
       where id = entryLabel block
    vchildren :: forall a. [block C C] -> ([block C C] -> LabelSet -> a) -> [block C C] -> LabelSet -> a
    vchildren bs cont acc visited = next bs acc visited
@@ -343,7 +346,7 @@ postorder_dfs_from_except blocks b visited =
 
 postorder_dfs_from
     :: (NonLocal block, LabelsPtr b) => LabelMap (block C C) -> b -> [block C C]
-postorder_dfs_from blocks b = postorder_dfs_from_except blocks b setEmpty
+postorder_dfs_from blocks b = postorder_dfs_from_except blocks b ES.empty
 
 
 ----------------------------------------------------------------
@@ -362,10 +365,10 @@ instance Monad VM where
   m >>= k  = VM $ \visited -> let (a, v') = unVM m visited in unVM (k a) v'
 
 marked :: Label -> VM Bool
-marked l = VM $ \v -> (setMember l v, v)
+marked l = VM $ \v -> (ES.member l v, v)
 
 mark   :: Label -> VM ()
-mark   l = VM $ \v -> ((), setInsert l v)
+mark   l = VM $ \v -> ((), ES.insert l v)
 
 preorder_dfs_from_except :: forall block e . (NonLocal block, LabelsPtr e)
                          => LabelMap (block C C) -> e -> LabelSet -> [block C C]
@@ -396,29 +399,29 @@ cons a as tail = a : as tail
 
 labelsDefined :: forall block n e x . NonLocal (block n) => Graph' block n e x
               -> LabelSet
-labelsDefined GNil      = setEmpty
-labelsDefined (GUnit{}) = setEmpty
-labelsDefined (GMany _ body x) = mapFoldWithKey addEntry (exitLabel x) body
-  where addEntry :: forall a. ElemOf LabelSet -> a -> LabelSet -> LabelSet
-        addEntry label _ labels = setInsert label labels
+labelsDefined GNil      = ES.empty
+labelsDefined (GUnit{}) = ES.empty
+labelsDefined (GMany _ body x) = EM.foldWithKey addEntry (exitLabel x) body
+  where addEntry :: forall a. Label -> a -> LabelSet -> LabelSet
+        addEntry label _ labels = ES.insert label labels
         exitLabel :: MaybeO x (block n C O) -> LabelSet
-        exitLabel NothingO  = setEmpty
-        exitLabel (JustO b) = setSingleton (entryLabel b)
+        exitLabel NothingO  = ES.empty
+        exitLabel (JustO b) = ES.singleton (entryLabel b)
 
 labelsUsed :: forall block n e x. NonLocal (block n) => Graph' block n e x
            -> LabelSet
-labelsUsed GNil      = setEmpty
-labelsUsed (GUnit{}) = setEmpty
-labelsUsed (GMany e body _) = mapFold addTargets (entryTargets e) body 
+labelsUsed GNil      = ES.empty
+labelsUsed (GUnit{}) = ES.empty
+labelsUsed (GMany e body _) = EM.foldr addTargets (entryTargets e) body 
   where addTargets :: forall e. block n e C -> LabelSet -> LabelSet
         addTargets block labels = setInsertList (successors block) labels
         entryTargets :: MaybeO e (block n O C) -> LabelSet
-        entryTargets NothingO = setEmpty
-        entryTargets (JustO b) = addTargets b setEmpty
+        entryTargets NothingO = ES.empty
+        entryTargets (JustO b) = addTargets b ES.empty
 
 externalEntryLabels :: forall n .
                        NonLocal n => LabelMap (Block n C C) -> LabelSet
-externalEntryLabels body = defined `setDifference` used
+externalEntryLabels body = defined `ES.difference` used
   where defined = labelsDefined g
         used = labelsUsed g
         g = GMany NothingO body NothingO

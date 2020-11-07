@@ -2,96 +2,32 @@
 
 {-# LANGUAGE CPP, TypeFamilies #-}
 #if __GLASGOW_HASKELL__ >= 701
-{-# LANGUAGE Safe #-}
+--{-# LANGUAGE Safe #-}
 #endif
 
-module Compiler.Hoopl.Collections ( IsSet(..)
-                                  , setInsertList, setDeleteList, setUnions
-                                  , IsMap(..)
-                                  , mapInsertList, mapDeleteList, mapUnions
+module Compiler.Hoopl.Collections ( setInsertList, setDeleteList
+                                  , mapInsertList, mapDeleteList
                                   ) where
 
-import Data.List (foldl', foldl1')
+import Data.EnumMap (EnumMap)
+import qualified Data.EnumMap as EM
+import Data.EnumSet (EnumSet)
+import qualified Data.EnumSet as ES
 
-class IsSet set where
-  type ElemOf set
+-- Helper functions
+setInsertList :: Enum k => [k] -> EnumSet k -> EnumSet k
+setInsertList keys set = ES.union set (ES.fromList keys)
+-- setInsertList keys set = foldl' (flip setInsert) set keys
 
-  setNull :: set -> Bool
-  setSize :: set -> Int
-  setMember :: ElemOf set -> set -> Bool
+setDeleteList :: Enum k => [k] -> EnumSet k -> EnumSet k
+setDeleteList keys set = ES.difference set (ES.fromList keys)
+--setDeleteList keys set = foldl' (flip setDelete) set keys
 
-  setEmpty :: set
-  setSingleton :: ElemOf set -> set
-  setInsert :: ElemOf set -> set -> set
-  setDelete :: ElemOf set -> set -> set
-  setFilter :: (ElemOf set -> Bool) -> set -> set
-
-  setUnion :: set -> set -> set
-  setDifference :: set -> set -> set
-  setIntersection :: set -> set -> set
-  setIsSubsetOf :: set -> set -> Bool
-
-  setFold :: (ElemOf set -> b -> b) -> b -> set -> b
-
-  setElems :: set -> [ElemOf set]
-  setFromList :: [ElemOf set] -> set
-
--- Helper functions for IsSet class
-setInsertList :: IsSet set => [ElemOf set] -> set -> set
-setInsertList keys set = foldl' (flip setInsert) set keys
-
-setDeleteList :: IsSet set => [ElemOf set] -> set -> set
-setDeleteList keys set = foldl' (flip setDelete) set keys
-
-setUnions :: IsSet set => [set] -> set
-setUnions [] = setEmpty
-setUnions sets = foldl1' setUnion sets
-
-
-class IsMap map where
-  type KeyOf map
-
-  mapNull :: map a -> Bool
-  mapSize :: map a -> Int
-  mapMember :: KeyOf map -> map a -> Bool
-  mapLookup :: KeyOf map -> map a -> Maybe a
-  mapFindWithDefault :: a -> KeyOf map -> map a -> a
-
-  mapEmpty :: map a
-  mapSingleton :: KeyOf map -> a -> map a
-  mapInsert :: KeyOf map -> a -> map a -> map a
-  mapInsertWith :: (a -> a -> a) -> KeyOf map -> a -> map a -> map a
-  mapDelete :: KeyOf map -> map a -> map a
-  mapAdjust :: (a -> a) -> KeyOf map -> map a -> map a
-
-  mapUnion :: map a -> map a -> map a
-  mapUnionWithKey :: (KeyOf map -> a -> a -> a) -> map a -> map a -> map a
-  mapDifference :: map a -> map a -> map a
-  mapIntersection :: map a -> map a -> map a
-  mapIsSubmapOf :: Eq a => map a -> map a -> Bool
-
-  mapMap :: (a -> b) -> map a -> map b
-  mapMapWithKey :: (KeyOf map -> a -> b) -> map a -> map b
-  mapFold :: (a -> b -> b) -> b -> map a -> b
-  mapFoldWithKey :: (KeyOf map -> a -> b -> b) -> b -> map a -> b
-  mapFilter :: (a -> Bool) -> map a -> map a
-  mapFilterWithKey :: (KeyOf map -> a -> Bool) -> map a -> map a
-  mapAccum :: (a -> b -> (a, c)) -> a -> map b -> (a, map c)
-  mapAccumWithKey :: (a -> KeyOf map -> b -> (a, c)) -> a -> map b -> (a, map c)
-
-  mapElems :: map a -> [a]
-  mapKeys :: map a -> [KeyOf map]
-  mapToList :: map a -> [(KeyOf map, a)]
-  mapFromList :: [(KeyOf map, a)] -> map a
-  mapFromListWith :: (a -> a -> a) -> [(KeyOf map,a)] -> map a
 
 -- Helper functions for IsMap class
-mapInsertList :: IsMap map => [(KeyOf map, a)] -> map a -> map a
-mapInsertList assocs map = foldl' (flip (uncurry mapInsert)) map assocs
+mapInsertList :: Enum k => [(k, a)] -> EnumMap k a -> EnumMap k a
+mapInsertList assocs map = EM.union map (EM.fromList assocs)
+--mapInsertList assocs map = foldl' (flip (uncurry mapInsert)) map assocs
 
-mapDeleteList :: IsMap map => [KeyOf map] -> map a -> map a
-mapDeleteList keys map = foldl' (flip mapDelete) map keys
-
-mapUnions :: IsMap map => [map a] -> map a
-mapUnions [] = mapEmpty
-mapUnions maps = foldl1' mapUnion maps
+mapDeleteList :: Enum k => [k] -> EnumMap k a -> EnumMap k a
+mapDeleteList keys map = EM.restrictKeys map (ES.fromList keys)

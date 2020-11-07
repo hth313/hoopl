@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP, GADTs #-}
 {-# OPTIONS_GHC -Wall -fno-warn-name-shadowing #-}
 #if __GLASGOW_HASKELL__ >= 701
-{-# LANGUAGE Safe #-}
+--{-# LANGUAGE Safe #-}
 #endif
 
 module Compiler.Hoopl.Passes.DList

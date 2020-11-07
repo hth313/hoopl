@@ -1,6 +1,6 @@
 {-# LANGUAGE CPP, RankNTypes, GADTs, ScopedTypeVariables, FlexibleContexts #-}
 #if __GLASGOW_HASKELL__ >= 701
-{-# LANGUAGE Safe #-}
+--{-# LANGUAGE Safe #-}
 #endif
 
 module Compiler.Hoopl.Debug 
