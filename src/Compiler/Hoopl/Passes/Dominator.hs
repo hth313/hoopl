@@ -124,7 +124,7 @@ instance Show DominatorNode where
 -- | Takes FactBase from dominator analysis and returns a map from each 
 -- label to its immediate dominator, if any
 immediateDominators :: FactBase Doms -> LabelMap Label
-immediateDominators = EM.foldWithKey add EM.empty
+immediateDominators = EM.foldrWithKey add EM.empty
     where add l (PElem (DPath (idom:_))) = EM.insert l idom 
           add _ _ = id
 

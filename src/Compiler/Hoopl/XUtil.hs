@@ -137,7 +137,7 @@ distributeFactBwd n f = EM.singleton (entryLabel n) f
 
 -- | List of (unlabelled) facts from the successors of a last node
 successorFacts :: NonLocal n => n O C -> FactBase f -> [f]
-successorFacts n fb = [ f | id <- successors n, let Just f = lookupFact id fb ]
+successorFacts n fb = mapMaybe (flip lookupFact fb) (successors n)
 
 -- | Join a list of facts.
 joinFacts :: DataflowLattice f -> Label -> [f] -> f

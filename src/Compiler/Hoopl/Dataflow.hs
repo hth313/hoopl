@@ -42,8 +42,9 @@ import Compiler.Hoopl.Graph hiding (Graph) -- hiding so we can redefine
                                            -- and include definition in paper
 import Compiler.Hoopl.Label
 
-import Control.Monad
-import Data.Maybe
+import Control.Monad (liftM)
+import Data.Kind (Type)
+import Data.Maybe (fromJust)
 
 import qualified Data.EnumMap as EM
 
@@ -171,7 +172,7 @@ mkFRewrite :: FuelMonad m => (forall e x . n e x -> f -> m (Maybe (Graph n e x))
 mkFRewrite f = mkFRewrite3 f f f
 
 
-type family   Fact x f :: *
+type family   Fact x f :: Type
 type instance Fact C f = FactBase f
 type instance Fact O f = f
 
@@ -293,7 +294,7 @@ arfGraph pass@FwdPass { fp_lattice = lattice,
 -- We know the results _shouldn't change_, but the transfer
 -- functions might, for example, generate some debugging traces.
 joinInFacts :: DataflowLattice f -> FactBase f -> FactBase f
-joinInFacts (lattice @ DataflowLattice {fact_bot = bot, fact_join = fj}) fb =
+joinInFacts (lattice@DataflowLattice {fact_bot = bot, fact_join = fj}) fb =
   mkFactBase lattice $ map botJoin $ EM.toList fb
     where botJoin (l, f) = (l, snd $ fj l (OldFact bot) (NewFact f))
 
@@ -592,7 +593,7 @@ fixpoint direction lat do_block entries blockmap init_fbase
          Just blk -> do
            -- trace ("analysing: " ++ show lbl) $ return ()
            (rg, out_facts) <- do_block blk fbase
-           let (changed, fbase') = EM.foldWithKey
+           let (changed, fbase') = EM.foldrWithKey
                                      (updateFact lat newblocks)
                                      ([],fbase) out_facts
            -- trace ("fbase': " ++ show (mapKeys fbase')) $ return ()
@@ -717,7 +718,7 @@ normalizeGraph g = (mapGraphBlocks dropFact g, facts g)
           exitFacts NothingO = noFacts
           exitFacts (JustO (DBlock f b)) = EM.singleton (entryLabel b) f
           bodyFacts :: LabelMap (DBlock f n C C) -> FactBase f
-          bodyFacts body = EM.foldWithKey f noFacts body
+          bodyFacts body = EM.foldrWithKey f noFacts body
             where f :: forall t a x. Label -> DBlock a t C x -> LabelMap a -> LabelMap a
                   f lbl (DBlock f _) fb = EM.insert lbl f fb
 

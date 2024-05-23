@@ -16,7 +16,6 @@ where
 import Control.Monad
 import Data.Maybe
 
-import Compiler.Hoopl.Collections
 import Compiler.Hoopl.Dataflow
 import Compiler.Hoopl.Fuel
 import Compiler.Hoopl.Block

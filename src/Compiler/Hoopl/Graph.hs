@@ -51,6 +51,7 @@ import Control.Monad (ap,liftM,liftM2)
 
 import qualified Data.EnumMap as EM
 import qualified Data.EnumSet as ES
+import Data.Kind (Type)
 
 -- -----------------------------------------------------------------------------
 -- Body
@@ -59,7 +60,7 @@ import qualified Data.EnumSet as ES
 type Body n = LabelMap (Block n C C)
 
 -- | @Body@ abstracted over @block@
-type Body' block (n :: * -> * -> *) = LabelMap (block n C C)
+type Body' block (n :: Type -> Type -> Type) = LabelMap (block n C C)
 
 emptyBody :: Body' block n
 emptyBody = EM.empty
@@ -92,7 +93,7 @@ type Graph = Graph' Block
 -- | @Graph'@ is abstracted over the block type, so that we can build
 -- graphs of annotated blocks for example (Compiler.Hoopl.Dataflow
 -- needs this).
-data Graph' block (n :: * -> * -> *) e x where
+data Graph' block (n :: Type -> Type -> Type) e x where
   GNil  :: Graph' block n O O
   GUnit :: block n O O -> Graph' block n O O
   GMany :: MaybeO e (block n O C)
@@ -401,7 +402,7 @@ labelsDefined :: forall block n e x . NonLocal (block n) => Graph' block n e x
               -> LabelSet
 labelsDefined GNil      = ES.empty
 labelsDefined (GUnit{}) = ES.empty
-labelsDefined (GMany _ body x) = EM.foldWithKey addEntry (exitLabel x) body
+labelsDefined (GMany _ body x) = EM.foldrWithKey addEntry (exitLabel x) body
   where addEntry :: forall a. Label -> a -> LabelSet -> LabelSet
         addEntry label _ labels = ES.insert label labels
         exitLabel :: MaybeO x (block n C O) -> LabelSet

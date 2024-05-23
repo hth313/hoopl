@@ -1,5 +1,5 @@
 Name:                hoopl
-Version:             3.10.2.2.1
+Version:             3.10.2.2.2
 -- NOTE: Don't forget to update ./changelog.md
 Description:
   Higher-order optimization library
@@ -40,8 +40,8 @@ Library
     Other-Extensions: Safe Trustworthy
 
   Hs-Source-Dirs:    src
-  Build-Depends:     base >= 4.3 && < 4.12,
-                     containers >= 0.5 && < 0.6,
+  Build-Depends:     base >= 4.3,
+                     containers >= 0.5,
                      enummapset >= 0.5.2
   Exposed-Modules:   Compiler.Hoopl,
                      Compiler.Hoopl.Internals,
