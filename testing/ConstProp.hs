@@ -3,6 +3,7 @@
 module ConstProp (ConstFact, constLattice, initFact, varHasLit, constProp) where
 
 import Control.Monad
+import qualified Data.EnumMap as EM
 import qualified Data.Map as Map
 
 import Compiler.Hoopl
@@ -48,7 +49,7 @@ varHasLit = mkFTransfer ft
   ft (Assign x (Lit k))   f = Map.insert x (PElem k) f
   ft (Assign x _)         f = Map.insert x Top f
   ft (Store _ _)          f = f
-  ft (Branch l)           f = mapSingleton l f
+  ft (Branch l)           f = EM.singleton l f
   ft (Cond (Var x) tl fl) f
       = mkFactBase constLattice
            [(tl, Map.insert x (PElem (Bool True))  f),
@@ -57,9 +58,9 @@ varHasLit = mkFTransfer ft
       = mkFactBase constLattice [(tl, f), (fl, f)]
 
 -- @ end cprop.tex
-  ft (Call vs _ _ bid)      f = mapSingleton bid (foldl toTop f vs)
+  ft (Call vs _ _ bid)      f = EM.singleton bid (foldl toTop f vs)
       where toTop f v = Map.insert v Top f
-  ft (Return _)             _ = mapEmpty
+  ft (Return _)             _ = EM.empty
 
 type MaybeChange a = a -> Maybe a
 -- @ start cprop.tex
