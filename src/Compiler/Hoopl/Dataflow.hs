@@ -561,11 +561,12 @@ fixpoint :: forall m n f. (CheckpointMonad m, NonLocal n)
 
 fixpoint direction lat do_block entries blockmap init_fbase
   = do
-        -- trace ("fixpoint: " ++ show (case direction of Fwd -> True; Bwd -> False) ++ " " ++ show (mapKeys blockmap) ++ show entries ++ " " ++ show (mapKeys init_fbase)) $ return()
+        --traceM ("Running fixpoint for " <> fact_name lat)
+        --traceM ("fixpoint: " ++ show (case direction of Fwd -> True; Bwd -> False) ++ " " ++ show (EM.keys blockmap) ++ show entries ++ " " ++ show (EM.keys init_fbase))
         (fbase, newblocks) <- loop init_fbase entries EM.empty
-        -- trace ("fixpoint DONE: " ++ show (mapKeys fbase) ++ show (mapKeys newblocks)) $ return()
+        --traceM ("fixpoint DONE: " ++ show (EM.keys fbase) ++ show (EM.keys newblocks))
         return (GMany NothingO newblocks NothingO,
-                mapDeleteList (EM.keys blockmap) fbase)
+                mapDeleteList (EM.keysSet blockmap) fbase)
     -- The successors of the Graph are the the Labels
     -- for which we have facts and which are *not* in
     -- the blocks of the graph
@@ -591,19 +592,19 @@ fixpoint direction lat do_block entries blockmap init_fbase
       case EM.lookup lbl blockmap of
          Nothing  -> loop fbase todo newblocks
          Just blk -> do
-           -- trace ("analysing: " ++ show lbl) $ return ()
+           --traceM ("analysing: " ++ show lbl)
            (rg, out_facts) <- do_block blk fbase
            let (changed, fbase') = EM.foldrWithKey
                                      (updateFact lat newblocks)
                                      ([],fbase) out_facts
-           -- trace ("fbase': " ++ show (mapKeys fbase')) $ return ()
-           -- trace ("changed: " ++ show changed) $ return ()
+           --traceM ("fbase': " ++ show (EM.keys fbase'))
+           --traceM ("changed: " ++ show changed)
      
            let to_analyse
                  = filter (`notElem` todo) $
                    concatMap (\l -> EM.findWithDefault [] l dep_blocks) changed
 
-           -- trace ("to analyse: " ++ show to_analyse) $ return ()
+           --traceM ("to analyse: " ++ show to_analyse)
 
            let newblocks' = case rg of
                               GMany _ blks _ -> EM.union blks newblocks

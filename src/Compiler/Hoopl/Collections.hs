@@ -29,5 +29,5 @@ mapInsertList :: Enum k => [(k, a)] -> EnumMap k a -> EnumMap k a
 mapInsertList assocs map = EM.union map (EM.fromList assocs)
 --mapInsertList assocs map = foldl' (flip (uncurry mapInsert)) map assocs
 
-mapDeleteList :: Enum k => [k] -> EnumMap k a -> EnumMap k a
-mapDeleteList keys map = EM.restrictKeys map (ES.fromList keys)
+mapDeleteList :: Enum k => EnumSet k -> EnumMap k a -> EnumMap k a
+mapDeleteList keys map = EM.withoutKeys map keys
