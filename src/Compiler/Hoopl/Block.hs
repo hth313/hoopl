@@ -17,7 +17,7 @@ module Compiler.Hoopl.Block (
   , isEmptyBlock
 
     -- ** Constructing blocks
-  , emptyBlock, blockCons, blockSnoc
+  , emptyBlock, blockCons, blockSnoc, blockUnsnoc, blockInit
   , blockJoinHead, blockJoinTail, blockJoin, blockJoinAny
   , blockAppend
 
@@ -140,6 +140,33 @@ blockSnoc b n = case b of
   BCat{}      -> b `BSnoc` n
   BSnoc{}     -> b `BSnoc` n
   BCons{}     -> b `BSnoc` n
+
+blockUnsnoc :: Block n e O -> Maybe (Block n e O, n O O)
+blockUnsnoc b =
+  case b of
+    BlockCO cn b -> (\(b', n) -> (BlockCO cn b', n)) <$> blockUnsnoc b
+    BNil -> Nothing
+    BSnoc b n -> Just (b, n)
+    BMiddle n -> Just (BNil, n)
+    BCat b BNil -> blockUnsnoc b
+    BCat BNil b -> blockUnsnoc b
+    BCat b1 b2 -> (\(b2', n) -> (BCat b1 b2', n)) <$> blockUnsnoc b2
+    BCons n BNil -> Just (BNil, n)
+    BCons cn b -> (\(b', n) -> (BCons cn b', n)) <$> blockUnsnoc b
+
+-- | Safely return all nodes except the last one
+blockInit :: Block n e O -> Maybe (Block n e O)
+blockInit b =
+  case b of
+    BlockCO n b -> (\b' -> (BlockCO n b')) <$> blockInit b
+    BNil -> Nothing
+    BSnoc b _n -> Just b
+    BMiddle _n -> Just BNil
+    BCat b BNil -> blockInit b
+    BCat BNil b -> blockInit b
+    BCat b1 b2 -> (\b2' -> (BCat b1 b2')) <$> blockInit b2
+    BCons _n BNil -> Just BNil
+    BCons n b -> (\b' -> (BCons n b')) <$> blockInit b
 
 blockJoinHead :: n C O -> Block n O x -> Block n C x
 blockJoinHead f (BlockOC b l) = BlockCC f b l
